@@ -39,7 +39,7 @@ ISR (TIM1_COMPA_vect) {
 	static uint8_t  state_flag = OFF;
 	static uint8_t  modechange_flag = NOCHANGE;
 	static uint8_t devmode_flag = OFF;
-
+#if 0
 	if ((PINB & _BV(PB2)) == 0) {
 		//USB cable isn't plugged in.
 
@@ -141,6 +141,7 @@ ISR (TIM1_COMPA_vect) {
 			TIFR1 = 0x00;
 		}//End Dev Mode check
 	}//End USB connection check
+#endif
 }//End ISR
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------
 		
@@ -244,7 +245,17 @@ int main (void) {
 
     //Sleep. Interrupts will handle everything else.
     for (;;)
-        sleep_mode();
+	{
+	if (PINA & _BV(PA5) == 0)
+	{
+		PORTA &= ~_BV(PA0);	
+	}
+	else
+	{
+		PORTA |= _BV(PA0);
+	}
+	}
+     //   sleep_mode();
 
 }//End firmware
 
