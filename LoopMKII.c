@@ -39,7 +39,20 @@ ISR (TIM1_COMPA_vect) {
 	static uint8_t  state_flag = OFF;
 	static uint8_t  modechange_flag = NOCHANGE;
 	static uint8_t devmode_flag = OFF;
-#if 0
+	static uint8_t startmenu=OFF;
+	static uint16_t menucount=0;
+
+	if (startmenu == ON)
+	{	
+		menucount++;
+		if (menucount>20)
+		{
+			startmenu=OFF;
+			menucount=0;
+			PORTA |= _BV(PA0);
+		}
+	}
+
 	if ((PINB & _BV(PB2)) == 0) {
 		//USB cable isn't plugged in.
 
@@ -51,7 +64,7 @@ ISR (TIM1_COMPA_vect) {
 
 			button_count++;		//Count the number of interrupts that go by with the button held down
 
-			if (button_count > 150) {	//3 second * 50 units per second = 150 'ticks'
+			if (button_count > 50) {	//3 second * 50 units per second = 150 'ticks'
 				//Button held down for three seconds? Turn on/off the stabilizer.
 				switch (state_flag) {
 					case ON:	//Are we already on? Turn off.
@@ -78,12 +91,12 @@ ISR (TIM1_COMPA_vect) {
 			//Actually the button is not being pushed right now.
 
 			/*We need to turn on Menu if the Button is clicked for a short time, so we need to ground PA0*/
-			if ((button_count > 0) && (button_count < 25) && modechange_flag == NOCHANGE) {
+			if (button_count>0)
+			{
 				PORTA &= ~_BV(PA0);		//Turn MENU On (set bit low)
-				//_delay_ms(100);			//wait 1/10s
-				PORTA |= _BV(PA0);		//Turn MENU Off (set bit high)
-				click_count++;			//Make note that we had (another?) click
-				click_countdown = 100;		//About two seconds of interrupts; refresh each time there is a click
+				startmenu=ON;
+				//click_count++;			//Make note that we had (another?) click
+				//click_countdown = 100;		//About two seconds of interrupts; refresh each time there is a click
 			}
 
 			button_count = 0;			//Reset counter! No point in rolling this 
@@ -95,8 +108,8 @@ ISR (TIM1_COMPA_vect) {
 		
 
 
-		//Firmware Update.
-		if (click_count > 10) {
+		/*//Firmware Update.
+		if (click_count > 4) {
 			//Turn on just the 3.3V power rail
 			PORTA &= ~_BV(PA1);	//Turn 8.4V n-FET off (set bit low)
 			PORTA |= _BV(PA2);	//Turn 3.3V n-FET on (set bit high)
@@ -105,7 +118,7 @@ ISR (TIM1_COMPA_vect) {
 		}
 
 		//Dev Mode.
-		if (click_count > 14) {
+		if (click_count > 6) {
 			//Turn on both power rails:
 			PORTA |= _BV(PA1);	//Turn 8.4V n-FET on (set bit high)
 			PORTA |= _BV(PA2);	//Turn 3.3V n-FET on (set bit high)
@@ -117,16 +130,20 @@ ISR (TIM1_COMPA_vect) {
 		if (click_countdown > 0) click_countdown--;
 		if (click_countdown == 0) { click_count = 0; }
 
-
+*/
 
 	} else {
 		//USB cable IS plugged in, so Charging Mode.
-
+		if ((PINA & _BV(PA5)) == 0)
+			{
+				PORTA &= ~_BV(PA0);	//Turn MENU On (set bit low)
+				startmenu=ON;
+			}
 		if (devmode_flag == OFF) {
-
+			
 			//Turn device Off while charging.
-			PORTA &= ~_BV(PA1);	//Turn 8.4V n-FET off (set bit low)
-			PORTA &= ~_BV(PA2);	//Turn 3.3V n-FET off (set bit low)
+			//PORTA &= ~_BV(PA1);	//Turn 8.4V n-FET off (set bit low)
+			//PORTA &= ~_BV(PA2);	//Turn 3.3V n-FET off (set bit low)
 
 			//Reset the system state flag to OFF.
 			//If the USB cable is disconnected, both internal power rails will be turned off.
@@ -141,7 +158,7 @@ ISR (TIM1_COMPA_vect) {
 			TIFR1 = 0x00;
 		}//End Dev Mode check
 	}//End USB connection check
-#endif
+
 }//End ISR
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------
 		
@@ -244,18 +261,9 @@ int main (void) {
 	sei ();		//Turn on global interrupts
 
     //Sleep. Interrupts will handle everything else.
+	
     for (;;)
-	{
-	if (PINA & _BV(PA5) == 0)
-	{
-		PORTA &= ~_BV(PA0);	
-	}
-	else
-	{
-		PORTA |= _BV(PA0);
-	}
-	}
-     //   sleep_mode();
+	sleep_mode();
 
 }//End firmware
 
